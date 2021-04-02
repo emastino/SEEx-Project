@@ -124,10 +124,11 @@ def contourImage(frame):
                     
 
 
-    driveCommands(left_contour_area, right_contour_area)
+#     driveCommands(left_contour_area, right_contour_area)
+    driveLeftLineCommands(left_contour_area, right_contour_area)
 #     cv2.imshow("full screen", mask_yellow)
-#     cv2.imshow("left", left_screen)
-#     cv2.imshow("right", right_screen)
+    cv2.imshow("left", left_screen)
+    cv2.imshow("right", right_screen)
     
 ############################################################################################
 def driveCommands(leftPix, rightPix):
@@ -165,54 +166,64 @@ def driveCommands(leftPix, rightPix):
     
 ############################################################################################
 def driveLeftLineCommands(leftPix, rightPix):
-    
+    print(leftPix, rightPix)
     # total number of pixels
     totalPix = leftPix + rightPix
     
     # threshold bound
-    bound = 500
+    bound = 1000
     
     # arbitrary left number of pixels to not be over
-    leftThreshold = 45000
+    leftThreshold = 10000
     
     # arbitrary right number of pixels to not be over
-    rightThreshold = 15000
+    rightThreshold = 10000
     
     
     # When too far left and we wish to turn right
-    if leftPix >= leftThreshold + bound && rightPix <= rightThreshold:
-        # percent of leftPixels
-        percent = int(100*leftThreshold/leftPix)
+    if leftPix >= leftThreshold + bound and rightPix <= rightThreshold:
         
-        if percent >=100:
-            commandTemp = "FR_" + str(percent)
-        else:
-            commandTemp = "FR_0" + str(percent)
+        print("CASE #1")
+        commandTemp = "FR_0" + str(50)
+#         # percent of leftPixels
+#         percent = int(100*leftThreshold/leftPix)
+#         
+#         if percent >=100:
+#             commandTemp = "FR_" + str(percent)
+#         else:
+#             commandTemp = "FR_0" + str(percent)
         print(commandTemp)
         
         
     # Wehn too far right and we wish to turn left
-    elif lefttPix <= leftThreshold - bound && rightPix <= rightThreshold:
-        
-        percent = int(100*leftPix/leftThreshold)
-        
-        if percent >=100:
-            commandTemp = "FR_" + str(percent)
-        else:
-            commandTemp = "FR_0" + str(percent)
+    elif leftPix <= leftThreshold - bound and rightPix <= rightThreshold:
+#         commandTemp = "FF_100"
+#         print(commandTemp)
+        print("CASE #2")
+        commandTemp = "FL_0" + str(50)
+#         percent = int(100*leftPix/leftThreshold)
+#         
+#         if percent >=100:
+#             commandTemp = "FL_" + str(percent)
+#         elif percent == 0:
+#             commandTemp = "FL_" +str(50)
+#         else:
+#             commandTemp = "FL_0" + str(percent)
         
         print(commandTemp)
         
     # Run into a concave corner so we need to turn right
-    elif lefttPix >= leftThreshold + bound && rightPix >= rightThreshold:
+    elif leftPix >= leftThreshold + bound and rightPix >= rightThreshold:
         
-        percent = int(100*rightPix/totalPix)
-        
-        if percent >=100:
-            commandTemp = "FR_" + str(percent)
-        else:
-            commandTemp = "FR_0" + str(percent)
-        
+        print("CASE #3")
+        commandTemp = "FR_0" + str(50)
+#         percent = int(100*rightPix/totalPix)
+#         
+#         if percent >=100:
+#             commandTemp = "FR_" + str(percent)
+#         else:
+#             commandTemp = "FR_0" + str(percent)
+#         
         print(commandTemp)
         
         
@@ -528,7 +539,7 @@ class DepthAI:
                         frame = show_nn(nnet_prev["entries_prev"][camera], frame, NN_json=NN_json, config=config)
                         temp = nnet_prev["entries_prev"][camera] # temp is a list of a dictionary
                         
-                        SEEx_frame = 
+#                         SEEx_frame = 
                         
                         # this will only handle one balloon I believe 
                         if len(temp) > 0:
