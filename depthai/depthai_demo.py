@@ -269,7 +269,23 @@ def region_of_interest(image, roi):
     masked_image = cv2.bitwise_and(image,mask)
     
     return masked_image
+
+############################################################################################
+
+def lineParser(image):
+    # pass in a canny image
+    lines = cv2.HoughLinesP(image, 2,np.pi10, 100, np.array([]), minLineLength = 40, maxLineGap = 5)
+    return lines
+
+############################################################################################
+
+def display_lines(image):
+    line_image = np.zeros_like(image)
     
+    if lines is not None:
+        for line in lines:
+            x1,y1,x2,y2 = line.reshape(4)
+            cv2.line(line_image, (x1,y1), (x2,y2), (255,0,0), 10)
 
 ############################################################################################
         
