@@ -66,16 +66,18 @@ SEEx_time_0 = time()
 # SEEx Functions
 #
 ################################################################################################
-def contourImage(frame):
+def contourImage(frame_passed):
+    
+    # make copy of image
+    frame = np.copy(frame_passed)
+    
     # Dimesnions
     height = frame.shape[0]
     width = frame.shape[1]
     
-
-    
+    # convert to HSV
     pp = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-    
-    
+
     # color detection for YELLOW lines
     lower_yellow = np.array([25,75,20])
     upper_yellow = np.array([35,255,255])
@@ -184,14 +186,14 @@ def driveLeftLineCommands(leftPix, rightPix):
     if leftPix >= leftThreshold + bound and rightPix <= rightThreshold:
         
         print("CASE #1")
-        commandTemp = "FR_0" + str(50)
-#         # percent of leftPixels
-#         percent = int(100*leftThreshold/leftPix)
-#         
-#         if percent >=100:
-#             commandTemp = "FR_" + str(percent)
-#         else:
-#             commandTemp = "FR_0" + str(percent)
+#         commandTemp = "FR_0" + str(50)
+        # percent of leftPixels
+        percent = int(100*leftThreshold/leftPix)
+        
+        if percent >=100:
+            commandTemp = "FR_" + str(percent)
+        else:
+            commandTemp = "FR_0" + str(percent)
         print(commandTemp)
         
         
@@ -200,15 +202,15 @@ def driveLeftLineCommands(leftPix, rightPix):
 #         commandTemp = "FF_100"
 #         print(commandTemp)
         print("CASE #2")
-        commandTemp = "FL_0" + str(50)
-#         percent = int(100*leftPix/leftThreshold)
-#         
-#         if percent >=100:
-#             commandTemp = "FL_" + str(percent)
-#         elif percent == 0:
-#             commandTemp = "FL_" +str(50)
-#         else:
-#             commandTemp = "FL_0" + str(percent)
+#         commandTemp = "FL_0" + str(50)
+        percent = int(100*leftPix/leftThreshold)
+        
+        if percent >=100:
+            commandTemp = "FL_" + str(percent)
+        elif percent == 0:
+            commandTemp = "FL_" +str(50)
+        else:
+            commandTemp = "FL_0" + str(percent)
         
         print(commandTemp)
         
@@ -216,13 +218,13 @@ def driveLeftLineCommands(leftPix, rightPix):
     elif leftPix >= leftThreshold + bound and rightPix >= rightThreshold:
         
         print("CASE #3")
-        commandTemp = "FR_0" + str(50)
-#         percent = int(100*rightPix/totalPix)
-#         
-#         if percent >=100:
-#             commandTemp = "FR_" + str(percent)
-#         else:
-#             commandTemp = "FR_0" + str(percent)
+#         commandTemp = "FR_0" + str(50)
+        percent = int(100*rightThreshold/rightPix)
+        
+        if percent >=100:
+            commandTemp = "FR_" + str(percent)
+        else:
+            commandTemp = "FR_0" + str(percent)
 #         
         print(commandTemp)
         
@@ -235,9 +237,38 @@ def driveLeftLineCommands(leftPix, rightPix):
     command = ConvertStringsToBytes(commandTemp)
     
     # Send command
-    sendMessage(command)    
-############################################################################################
+    sendMessage(command)
     
+############################################################################################
+
+def canny(frame_passed):
+    
+    # make image gray scale
+    gray = cv2.cvtColor(lane_image,cv2.COLOR_RGB2GRAY)
+    
+    # Gaussian Blur the image
+    blur = cv2.GaussianBlur(gray,(5,5),0) # 5x5 Kernel with deviation = 0
+    
+    # Make a canny image
+    canny = cv2.Canny(blur,50, 150)
+
+    return canny
+
+############################################################################################
+
+def region_of_interest(image, roi):
+    # must be an array of polygons
+    # roi_left  = np.array([
+    # [(0, height/2), (0, height), (width/2, height), (width/2,height/2)]
+    # ])
+    # roi_right = np.array([
+    # [(width/2, height/2), (width/2, height), (width, height), (width,height/2)]
+    # ])
+    mask = np.zeros_like(image)
+    cv2.fillPoly(mask,roi, 255)
+    
+
+############################################################################################
         
 def sendMessage(command):
     global SEEx_time_0
@@ -580,12 +611,18 @@ class DepthAI:
 #                     cv2.putText(frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
 #                     print("line 290")
 #                     print(window_name)
-                    # get frame with lines
-                    contourImage(frame)
+                    
+                    
+                    # make copy of image
+                    passed_image = np.copy(frame)
+                    contourImage(passed_image)
 #                     cv2.imshow("dev", image_with_lines) # show lines on a dev feed
                     
                     
-                    cv2.imshow(window_name, frame) # show depthai OG feed
+                    
+                    cv2.imshow(window_name, passed_image) # show depthai OG feed
+                    
+                    
                 elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
                     frame_bgr = packetData
                     if args['pointcloud'] and packet.stream_name == 'rectified_right':
