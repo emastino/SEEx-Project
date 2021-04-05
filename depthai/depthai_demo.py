@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# To Run: ./depthai_demo.py -cnn tiny-yolo-v3 -sh 4 -nce 1
+
+
+
 import json
 import platform
 import os
@@ -127,7 +131,7 @@ def contourImage(frame_passed):
 
 
 #     driveCommands(left_contour_area, right_contour_area)
-    driveLeftLineCommands(left_contour_area, right_contour_area)
+#     driveLeftLineCommands(left_contour_area, right_contour_area)
 #     cv2.imshow("full screen", mask_yellow)
     cv2.imshow("left", left_screen)
     cv2.imshow("right", right_screen)
@@ -164,7 +168,7 @@ def driveCommands(leftPix, rightPix):
     command = ConvertStringsToBytes(commandTemp)
     
     # Send command
-    sendMessage(command)
+#     sendMessage(command)
     
 ############################################################################################
 def driveLeftLineCommands(leftPix, rightPix):
@@ -237,7 +241,7 @@ def driveLeftLineCommands(leftPix, rightPix):
     command = ConvertStringsToBytes(commandTemp)
     
     # Send command
-    sendMessage(command)
+#     sendMessage(command)
     
 ############################################################################################
 
@@ -634,11 +638,47 @@ class DepthAI:
                     
                     # make copy of image
                     passed_image = np.copy(frame)
+                    
+                    # Contours
                     contourImage(passed_image)
 #                     cv2.imshow("dev", image_with_lines) # show lines on a dev feed
+
+                    # Lines
+                    height = passed_image.shape[0]
+                    width = passed_image.shape[1]
+                    
+                    # make a canny image
+                    canny = canny(passed_image)
+                    
+                    # regions of interest
+                    # must be an array of polygons
+                    roi_left  = np.array([
+                    [(0, height/2), (0, height), (width/2, height), (width/2,height/2)]
+                    ])
+                    
+                    roi_right = np.array([
+                    [(width/2, height/2), (width/2, height), (width, height), (width,height/2)]
+                    ])
                     
                     
+                    # left and right cropped images
+                    cropped_left = region_of_interest(canny,roi_left)
+                    cropped_right = region_of_interest(canny, roi_right)
                     
+                    # lines on left and right
+                    left_lines = cv2.HoughLinesP(cropped_left, 2,np.pi/180, 100, np.array([]), minLineLength = 40, maxLineGap = 5)
+                    right_lines = cv2.HoughLinesP(cropped_right, 2,np.pi/180, 100, np.array([]), minLineLength = 40, maxLineGap = 5)
+
+                    # Line images
+                    left_line_image = display_lines(passed_image, left_lines)
+                    right_line_image = display_lines(passed_image,right_lines)
+                    
+                    # Display Lines
+                    left_combo_image = cv2.addWeighted(passed_image, 0.8, left_line_image,1)
+                    right_combo_image = cv2.addWeighted(passed_image, 0.8, right_line_image,1)
+                    
+                    cv2.imshow("LEFT", left_combo_image)
+                    cv2.imshow("RIGHT", right_combo_image)
                     cv2.imshow(window_name, passed_image) # show depthai OG feed
                     
                     
