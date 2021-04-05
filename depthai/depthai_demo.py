@@ -248,7 +248,7 @@ def driveLeftLineCommands(leftPix, rightPix):
 def canny(frame_passed):
     
     # make image gray scale
-    gray = cv2.cvtColor(lane_image,cv2.COLOR_RGB2GRAY)
+    gray = cv2.cvtColor(frame_passed,cv2.COLOR_RGB2GRAY)
     
     # Gaussian Blur the image
     blur = cv2.GaussianBlur(gray,(5,5),0) # 5x5 Kernel with deviation = 0
@@ -291,6 +291,51 @@ def display_lines(image):
             x1,y1,x2,y2 = line.reshape(4)
             cv2.line(line_image, (x1,y1), (x2,y2), (255,0,0), 10)
 
+
+############################################################################################
+
+def average_slope_intercept(image, lines):
+    
+    line_fit =[]
+    corner_fit =[]
+    
+    for line in lines:
+        
+        x1, y1, x2, y2 = line.reshape(4)
+        parameters = np.polyfit((x1,x2), (y1,y2), 1) # gives back slope and y int for each line
+        
+        slope = parameters[0]
+        intercept = parameters[1]
+        
+        # i think that corner lines will always have eith m >=0 and m <0
+        if slope < 0:
+            left_fit.append((slope,intercept)) # left line 
+        else:
+            corner_fit.append((slope, intercept)) # corners
+    
+    # average slope and y ints of all the lines
+    left_fit_average = np.average(left_fit, axis = 0)
+    corner_fit_average = np.average(corner_fit, axis =0)
+    
+    # line coordinates using he averages
+    left_line = make_coordinates(image, left_fit_average)
+    corner_line = make_coordinates(image, corner_fit_average)
+    
+#     return left_fit_average, corner_fit_average
+
+
+
+############################################################################################
+
+def make_coordinates(image, line_parameters):
+    slope, intercept = line_parameters
+    
+    y1 = image.shape[0]
+    y2 = int(y1*(3/5))
+    x1 = int((y1-intercept)/slope)
+    x2 = int((y-intercept)/slope)
+    
+    return np.array([x1,y1,x2,y2])
 ############################################################################################
         
 def sendMessage(command):
@@ -648,7 +693,7 @@ class DepthAI:
                     width = passed_image.shape[1]
                     
                     # make a canny image
-                    canny = canny(passed_image)
+                    canny_image = canny(passed_image)
                     
                     # regions of interest
                     # must be an array of polygons
@@ -662,8 +707,8 @@ class DepthAI:
                     
                     
                     # left and right cropped images
-                    cropped_left = region_of_interest(canny,roi_left)
-                    cropped_right = region_of_interest(canny, roi_right)
+                    cropped_left = region_of_interest(canny_image,roi_left)
+                    cropped_right = region_of_interest(canny_image, roi_right)
                     
                     # lines on left and right
                     left_lines = cv2.HoughLinesP(cropped_left, 2,np.pi/180, 100, np.array([]), minLineLength = 40, maxLineGap = 5)
@@ -673,9 +718,12 @@ class DepthAI:
                     left_line_image = display_lines(passed_image, left_lines)
                     right_line_image = display_lines(passed_image,right_lines)
                     
+                    # averaged lines
+                    ave_left_line_image = average_slope_intercep(passed_image, left_line_image)
+                    ave_right_line_image = average_slope_intercep(passed_image, right_line_image)
                     # Display Lines
-                    left_combo_image = cv2.addWeighted(passed_image, 0.8, left_line_image,1)
-                    right_combo_image = cv2.addWeighted(passed_image, 0.8, right_line_image,1)
+                    left_combo_image = cv2.addWeighted(passed_image, 0.8, ave_left_line_image,1)
+                    right_combo_image = cv2.addWeighted(passed_image, 0.8, ave_right_line_image,1)
                     
                     cv2.imshow("LEFT", left_combo_image)
                     cv2.imshow("RIGHT", right_combo_image)
