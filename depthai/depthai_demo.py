@@ -266,6 +266,9 @@ def region_of_interest(image, roi):
     # ])
     mask = np.zeros_like(image)
     cv2.fillPoly(mask,roi, 255)
+    masked_image = cv2.bitwise_and(image,mask)
+    
+    return masked_image
     
 
 ############################################################################################
