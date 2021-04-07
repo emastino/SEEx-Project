@@ -201,7 +201,7 @@ def canny(frame_passed):
     blur = cv2.GaussianBlur(gray,(5,5),0) # 5x5 Kernel with deviation = 0
     
     # Make a canny image
-    canny = cv2.Canny(blur,50, 255)
+    canny = cv2.Canny(blur,150, 200)
 
     return canny
 
@@ -228,48 +228,52 @@ def display_lines(image, lines):
     line_image = np.zeros_like(image)
     
     if lines is not None:
-        
         for line in lines:
-            print("Size of Line: ", np.size(line))
             x1,y1,x2,y2 = line.reshape(4)
             cv2.line(line_image, (x1,y1), (x2,y2), (255,0,0), 10)
+    return line_image
 
 
 ############################################################################################
 
 def average_slope_intercept(image, lines):
     
-    angle_fit =[]
-#     corner_fit =[]
-  
+#     angle_fit =[]
+#     line_fit =[]
     if lines is not None:
-        
-        for line in lines:
-            
-            x1, y1, x2, y2 = line.reshape(4)
-            
-            angle = np.arctan2((y2 -y1),(x2 -x1))
-            angle_fit.append(angle)
-#             print(x1,y1,x2,y2)
+        average_coord = np.average(lines, axis =0)
+        print(average_coord)
+        left_line = make_coordinates(image, average_coord)
+        return np.array([left_line])
+    else:
+        return np.array([[0,0,0,0]])
+#     print(average_coord)
+#     if lines is not None:
+#         
+#         for line in lines:
+#             
+#             x1, y1, x2, y2 = line.reshape(4)
+#             
+# #             angle = np.arctan2((y2 -y1),(x2 -x1))
+# #             angle_fit.append(angle)
+# #             print(x1,y1,x2,y2)
 #             
 #             if x1 == x2:
-#                 break
+#                 slope = 10000
 #             else:
 #                 parameters = np.polyfit((x1,x2), (y1,y2), 1) # gives back slope and y int for each line
 #                 slope = parameters[0]
 #                 intercept = parameters[1]
 #             
-#             # i think that corner lines will always have eith m >=0 and m <0
-#             if slope < 0:
-#                 line_fit.append((slope,intercept)) # left line 
-#             else:
-#                 corner_fit.append((slope, intercept)) # corners
+#             line_fit.append((slope,intercept)) # left line 
+#             
+# #         
+#         # average slope and y ints of all the lines
 #         
-        # average slope and y ints of all the lines
-        
-        angle_fit_average = np.average(angle_fit, axis = 0)*180/np.pi
-#         corner_fit_average = np.average(corner_fit, axis =0)
-        print(angle_fit_average)
+# #         angle_fit_average = np.average(angle_fit, axis = 0)*180/np.pi
+#         left_fit_average = np.average(line_fit,axis=0)
+    
+#         print(angle_fit_average)
 #         # line coordinates using he averages
 #         left_line = make_coordinates(image, left_fit_average)
 #         corner_line = make_coordinates(image, corner_fit_average)
@@ -280,21 +284,74 @@ def average_slope_intercept(image, lines):
 
 ############################################################################################
 
-def make_coordinates(image, line_parameters):
+def make_coordinates(image, coords):
       
-    print("Line Parm", line_parameters, np.size(line_parameters))
-    slope, intercept = line_parameters
+    height = image.shape[0]
+    width = image.shape[1]
     
-    y1 = image.shape[0]
-    y2 = int(y1*(3/5))
+    x1, y1, x2, y2 = coords.reshape(4)
     
-    
-    x1 = int((y1-intercept)/slope)
-    x2 = int((y2-intercept)/slope)
-    
-    
-    print(x1,y1,x2,y2)
-    return np.array([x1,y1,x2,y2])
+    # calculate slope
+    if x1 == x2:
+        x_1 = x1
+        y_1 = height
+        x_2 = x2
+        y_2 = 0
+    else:
+        m = (y2-y1)/(x2-x1)
+            
+        # calculate y intercept
+        b = int(y1 - m*x1)
+        
+        # Check the intercepts
+        
+        # if m is negative
+        if m <= 0: 
+            if b > height:
+                # intersect bottome of screen so use y = height and then solve for x
+                y_1 = height
+                x_1 = int((y_1 - b)/m) 
+            else:
+                # intersecting left of screen
+                x_1 = 0
+                y_1 = b
+                
+            y_right = int(m*width + b)
+            
+            if y_right >= 0:
+                # intersect the right side of the wall
+                x_2 = width
+                y_2 = int(m*x_2 + b)
+                
+            else:
+                # intersect top wall
+                y_2 = 0
+                x_2 = int(-b/m)
+            
+            
+        else:
+            if b >= 0:
+                y_1 = b
+                x_1 = 0
+            else:
+                y_1 = 0
+                x_1 = int((y_1 -b)/m)
+                
+            y_right = int(m*width + b)
+            
+            if y_right >= height:
+                
+                y_2 = height
+                x_2 = int((y_2 -b)/m)
+                
+            else:
+                
+                x_2 = width
+                y_2 = int(m*x_2 + b)
+            
+
+#     print(x1,y1,x2,y2)
+    return np.array([x_1,y_1,x_2,y_2])
     
     
 ############################################################################################
