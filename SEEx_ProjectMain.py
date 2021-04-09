@@ -564,8 +564,8 @@ while (True):
 #     cv2.imshow('left', left_screen)
 #     cv2.imshow('right', right_screen)
     
-    
-    masked_yellow = contourImage(frame_copy)
+    # get contours of yellow line
+    contours_yellow = contourImage(frame_copy)
 #     if left_box is not None:
 #         cv2.drawContours(frame_copy, [left_box], 0, (0,191,255),2)
   
@@ -580,25 +580,52 @@ while (True):
 #     cv2.imshow("CANNY", canny_image)
 #     # regions of interest
 #     # must be an array of polygons
+
+    # V Contours for left and right sides
+    
+    # Left Contour
     roi_left_V  = np.array([
-    [(0, height), (int(width/2), height), (int(width/4), 0), (0,0)]
+    [(0, int(4*height/5)), (int(width/2), int(4*height/5)), (int(width/4), 0), (0,0)]
     ])
-    left_V_mask = region_of_interest(masked_yellow, roi_left_V)
+    
+    left_V_mask = region_of_interest(contours_yellow, roi_left_V)
     
     number_on_left_V = contourImageROICounter(left_V_mask)
     
-    
-    
-    
+    # Right Contour
     roi_right_V  = np.array([
-    [(int(width/2), height), (width, height), (width,0),(int(3*width/4), 0)]
+    [(int(width/2), int(4*height/5)), (width, int(4*height/5)), (width,0),(int(3*width/4), 0)]
     ])
-    right_V_mask = region_of_interest(masked_yellow, roi_right_V)
+    right_V_mask = region_of_interest(contours_yellow, roi_right_V)
     
     number_on_right_V = contourImageROICounter(right_V_mask)
-    print(number_on_left_V, number_on_right_V)
     
-    tots = right_V_mask + left_V_mask
+    
+    
+    # Contours for bottom left and right boxes
+    
+    roi_BL  = np.array([
+    [(0, int(4*height/5)), (int(width/2), int(4*height/5)), (int(width/2), height), (0,height)]
+    ])
+    
+    BL_mask = region_of_interest(contours_yellow, roi_BL)
+    
+    number_on_BL = contourImageROICounter(BL_mask)
+    
+    # Right Contour
+    roi_BR  = np.array([
+    [(int(width/2), int(4*height/5)), (int(width), int(4*height/5)), (int(width), height), (int(width/2),height)]
+    ])
+    
+    BR_mask = region_of_interest(contours_yellow, roi_BR)
+    
+    number_on_BR = contourImageROICounter(BR_mask)
+    
+    
+    # Pixels on V_L, V_R, B_L, and B_R
+    print(number_on_left_V, number_on_right_V, number_on_BL, number_on_BR)
+    
+    tots = right_V_mask + left_V_mask + BL_mask + BR_mask
     
     cv2.imshow("mask", tots)
     # left and right cropped images
