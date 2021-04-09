@@ -12,12 +12,42 @@ import getch
 import matplotlib.pylab as plt
 import RPi.GPIO as GPIO # import the GPIO library
 import SEEx_Function as SF
+
+# CONSTANTS
+global SEEx_time_0
+
+
+I2C_SLAVE_ADDRESS = 0x0b # arduino slave address
+I2Cbus = smbus.SMBus(1)
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)  # use BCMf numbering for the pins on the Pi
+
+
+SEEx_time_0 = time()
 ###############################################################################################
 ###############################################################################################
 #
 # SEEx Functions
 #
 ################################################################################################
+
+def adjust_brightness(image, level):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    b = np.mean(image[:,:,2])
+    
+    if b == 0:
+        return image
+    
+    r = level/b
+    c = image.copy()
+    
+    c[:,:,2] = c[:,:,2]*r
+    
+    return cv2.cvtColor(c, cv2.COLOR_HSV2BGR)
+
+
+################################################################################################
+
 def contourImage(frame):
     
     # Dimesnions
@@ -28,7 +58,7 @@ def contourImage(frame):
     pp = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
 
     # color detection for YELLOW lines
-    lower_yellow = np.array([15,75,20])
+    lower_yellow = np.array([25,50,20])
     upper_yellow = np.array([35,255,255])
     
     # yellow mask
@@ -42,6 +72,8 @@ def contourImage(frame):
     contours_left, hierarchy_left = cv2.findContours(left_screen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours_right, hierarchy_right = cv2.findContours(right_screen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
+
+    
     # initialize left contour area to 0
     left_contour_area = 0
     
@@ -49,6 +81,17 @@ def contourImage(frame):
         for contour in contours_left:
             if cv2.contourArea(contour)>300:
                 left_contour_area = left_contour_area + cv2.contourArea(contour)
+                
+                
+#                 (x,y,w,h) = cv2.boundingRect(contour)
+# #               
+#                 
+#                 rect = cv2.minAreaRect(contour)
+#                 box = cv2.boxPoints(rect)
+#                 box = np. int0(box)
+#                 
+#                 return box
+#                 cv2.drawContours(frame, [box], 0, (0,191,255),2)
      
     # initialize right contour area to 0     
     right_contour_area = 0
@@ -75,14 +118,36 @@ def contourImage(frame):
                     
 
 
-#     driveCommands(left_contour_area, right_contour_area)
+    driveCommands(left_contour_area, right_contour_area)
 #     driveLeftLineCommands(left_contour_area, right_contour_area)
 #     cv2.imshow("full screen", mask_yellow)
 
-    return left_screen, right_screen
-#     cv2.imshow("left", left_screen)
-#     cv2.imshow("right", right_screen)
+#     return left_screen, right_screen
+    cv2.imshow("left", left_screen)
+    cv2.imshow("right", right_screen)
+############################################################################################
+ 
+def order_box(box):
     
+    srt = np.argsort(box[:,1])
+    btm1 = box[srt[0]]
+    btm2 = box[srt[1]]
+    
+    top1 = box[srt[2]]
+    top2 = box[srt[3]]
+    
+    bc = btm1[0] < btm2[0]
+    btm_l = btm1 if bc else btm2
+    btm_r = btm2 if bc else btm1
+    
+    tc = top1[0] < top2[0]
+    top_l = top1 if tc else top2
+    top_r = top2 if tc else top1
+    
+    return np.array([top_l, top_r, btm_r, btm_l])
+
+ 
+ 
 ############################################################################################
 def driveCommands(leftPix, rightPix):
     
@@ -115,7 +180,7 @@ def driveCommands(leftPix, rightPix):
     command = ConvertStringsToBytes(commandTemp)
     
     # Send command
-#     sendMessage(command)
+    sendMessage(command)
     
 ############################################################################################
 def driveLeftLineCommands(leftPix, rightPix):
@@ -188,7 +253,7 @@ def driveLeftLineCommands(leftPix, rightPix):
     command = ConvertStringsToBytes(commandTemp)
     
     # Send command
-#     sendMessage(command)
+    sendMessage(command)
     
 ############################################################################################
 
@@ -201,7 +266,7 @@ def canny(frame_passed):
     blur = cv2.GaussianBlur(gray,(5,5),0) # 5x5 Kernel with deviation = 0
     
     # Make a canny image
-    canny = cv2.Canny(blur,150, 200)
+    canny = cv2.Canny(blur,100, 150)
 
     return canny
 
@@ -230,6 +295,7 @@ def display_lines(image, lines):
     if lines is not None:
         for line in lines:
             x1,y1,x2,y2 = line.reshape(4)
+            print(x1,y1,x2,y2)
             cv2.line(line_image, (x1,y1), (x2,y2), (255,0,0), 10)
     return line_image
 
@@ -242,7 +308,7 @@ def average_slope_intercept(image, lines):
 #     line_fit =[]
     if lines is not None:
         average_coord = np.average(lines, axis =0)
-        print(average_coord)
+#         print(average_coord)
         left_line = make_coordinates(image, average_coord)
         return np.array([left_line])
     else:
@@ -293,9 +359,9 @@ def make_coordinates(image, coords):
     
     # calculate slope
     if x1 == x2:
-        x_1 = x1
-        y_1 = height
-        x_2 = x2
+        x_1 = int(x1)
+        y_1 = int(height)
+        x_2 = int(x1)
         y_2 = 0
     else:
         m = (y2-y1)/(x2-x1)
@@ -309,18 +375,18 @@ def make_coordinates(image, coords):
         if m <= 0: 
             if b > height:
                 # intersect bottome of screen so use y = height and then solve for x
-                y_1 = height
+                y_1 = int(height)
                 x_1 = int((y_1 - b)/m) 
             else:
                 # intersecting left of screen
                 x_1 = 0
-                y_1 = b
+                y_1 = int(b)
                 
             y_right = int(m*width + b)
             
             if y_right >= 0:
                 # intersect the right side of the wall
-                x_2 = width
+                x_2 = int(width)
                 y_2 = int(m*x_2 + b)
                 
             else:
@@ -331,7 +397,7 @@ def make_coordinates(image, coords):
             
         else:
             if b >= 0:
-                y_1 = b
+                y_1 = int(b)
                 x_1 = 0
             else:
                 y_1 = 0
@@ -341,12 +407,12 @@ def make_coordinates(image, coords):
             
             if y_right >= height:
                 
-                y_2 = height
+                y_2 = int(height)
                 x_2 = int((y_2 -b)/m)
                 
             else:
                 
-                x_2 = width
+                x_2 = int(width)
                 y_2 = int(m*x_2 + b)
             
 
@@ -361,12 +427,16 @@ def sendMessage(command):
     
     # get current time
     current_time = time()
+
     # calculate time difference
     time_diff = current_time - SEEx_time_0
     
     if time_diff >= 0.1:  # if time difference greater than or equal to 0.1s, send commands
-            I2Cbus.write_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,command)
-            SEEx_time_0 = time()
+        print(time(), current_time)
+        I2Cbus.write_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,command)
+        SEEx_time_0 = time()
+        
+        
 #     data = I2Cbus.read_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,10)
 
 ############################################################################################
