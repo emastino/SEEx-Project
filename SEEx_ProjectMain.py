@@ -18,7 +18,7 @@ import SEEx_Function as SF
 # SEEx Constants
 global SEEx_time_0
 
-
+# I2C and GPIO set up
 I2C_SLAVE_ADDRESS = 0x0b # arduino slave address
 I2Cbus = smbus.SMBus(1)
 GPIO.setwarnings(False)
@@ -58,8 +58,8 @@ def adjust_brightness(image, level):
 
 ################################################################################################
 
-def contourImage(frame):
-    
+def contourImage(frame_passed):
+    frame = np.copy(frame_passed)
     # Dimesnions
     height = frame.shape[0]
     width = frame.shape[1]
@@ -68,30 +68,28 @@ def contourImage(frame):
     pp = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
 
     # color detection for YELLOW lines
-    lower_yellow = np.array([20,15,20])
+    lower_yellow = np.array([20,50,20])
     upper_yellow = np.array([40,255,255])
     
     # yellow mask
     mask_yellow = cv2.inRange(pp,lower_yellow,upper_yellow)
     
-    # left screen
-    left_screen = mask_yellow[int(0):height, 0:int(width/2)]
     # right screen
-    right_screen = mask_yellow[int(0):height, int(width/2):width]
+#     right_screen = mask_yellow[int(0):height, int(width/2):width]
     
-    contours_left, hierarchy_left = cv2.findContours(left_screen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contours_right, hierarchy_right = cv2.findContours(right_screen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_left, hierarchy_left = cv2.findContours(mask_yellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#     contours_right, hierarchy_right = cv2.findContours(right_screen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
 
     
     # initialize left contour area to 0
-    left_contour_area = 0
-    
-    if len(contours_left) !=0:
-        for contour in contours_left:
-            if cv2.contourArea(contour)>300:
-                left_contour_area = left_contour_area + cv2.contourArea(contour)
-                
+#     left_contour_area = 0
+#     
+#     if len(contours_left) !=0:
+#         for contour in contours_left:
+#             if cv2.contourArea(contour)>300:
+#                 left_contour_area = left_contour_area + cv2.contourArea(contour)
+#                 
                 
 #                 (x,y,w,h) = cv2.boundingRect(contour)
 # #               
@@ -104,12 +102,12 @@ def contourImage(frame):
 #                 cv2.drawContours(frame, [box], 0, (0,191,255),2)
      
     # initialize right contour area to 0     
-    right_contour_area = 0
-    
-    if len(contours_right) !=0:
-        for contour in contours_right:
-            if cv2.contourArea(contour)>300:
-                right_contour_area = right_contour_area + cv2.contourArea(contour)
+#     right_contour_area = 0
+#     
+#     if len(contours_right) !=0:
+#         for contour in contours_right:
+#             if cv2.contourArea(contour)>300:
+#                 right_contour_area = right_contour_area + cv2.contourArea(contour)
     
 #     print(left_contour_area, right_contour_area)
 #     # color detection for PURPLE lines
@@ -128,12 +126,44 @@ def contourImage(frame):
                     
 
 
-    driveCommands(left_contour_area, right_contour_area)
+#     driveCommands(left_contour_area, right_contour_area)
 #     driveLeftLineCommands(left_contour_area, right_contour_area)
-    cv2.imshow("left_screen", left_screen)
-    cv2.imshow("right_screen", right_screen)
-#     return left_screen, right_screen
+    return mask_yellow
 
+###########################################################################################
+
+def contourImageROICounter(frame_passed):
+    
+    frame = np.copy(frame_passed)
+    
+    # Dimesnions
+    height = frame.shape[0]
+    width = frame.shape[1]
+    contour_area = np.sum(frame==255)
+    
+# #     # convert to HSV
+# #     pp = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+# 
+#     # color detection for YELLOW lines
+#     lower_white = np.array([0,0,180])
+#     upper_white = np.array([255,255,255])
+#     
+#     # yellow mask
+#     mask = cv2.inRange(frame,lower_white,upper_white)
+# 
+#     
+#     contours, hierarchy_left = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+#     
+#     # initialize left contour area to 0
+#     contour_area = 0
+#     
+#     if len(contours) !=0:
+#         for contour in contours:
+#             if cv2.contourArea(contour)>10000:
+#                 contour_area = contour_area + cv2.contourArea(contour)
+                
+    
+    return contour_area
 ############################################################################################
  
 def order_box(box):
@@ -535,7 +565,7 @@ while (True):
 #     cv2.imshow('right', right_screen)
     
     
-    contourImage(frame_copy)
+    masked_yellow = contourImage(frame_copy)
 #     if left_box is not None:
 #         cv2.drawContours(frame_copy, [left_box], 0, (0,191,255),2)
   
@@ -545,16 +575,32 @@ while (True):
     width = frame_copy.shape[1]
 #     print(height,width)
 #     # make a canny image
-#     canny_image = SF.canny(frame_copy)
+#     canny_image = canny(frame_copy)
 #     
 #     cv2.imshow("CANNY", canny_image)
 #     # regions of interest
 #     # must be an array of polygons
-#     roi_left  = np.array([
-#     [(0, height), (int(width/2), height), (int(width/2), 0), (0,0)]
-#     ])
+    roi_left_V  = np.array([
+    [(0, height), (int(width/2), height), (int(width/4), 0), (0,0)]
+    ])
+    left_V_mask = region_of_interest(masked_yellow, roi_left_V)
+    
+    number_on_left_V = contourImageROICounter(left_V_mask)
     
     
+    
+    
+    roi_right_V  = np.array([
+    [(int(width/2), height), (width, height), (width,0),(int(3*width/4), 0)]
+    ])
+    right_V_mask = region_of_interest(masked_yellow, roi_right_V)
+    
+    number_on_right_V = contourImageROICounter(right_V_mask)
+    print(number_on_left_V, number_on_right_V)
+    
+    tots = right_V_mask + left_V_mask
+    
+    cv2.imshow("mask", tots)
     # left and right cropped images
 #     cropped_left = SF.region_of_interest(canny_image,roi_left)
     # lines on left and right
