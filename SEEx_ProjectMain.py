@@ -3,7 +3,7 @@
 import json
 import platform
 import os
-from time import time, monotonic,sleep
+from time import time,sleep
 import cv2
 import numpy as np
 import curses
@@ -13,7 +13,9 @@ import codecs
 import getch
 import matplotlib.pylab as plt
 import RPi.GPIO as GPIO # import the GPIO library
-import SEEx_Function as SF
+import subprocess
+
+
 
 # SEEx Constants
 global SEEx_time_0
@@ -66,18 +68,20 @@ def contourImage(frame_passed):
     
     # convert to HSV
     pp = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-
-    # color detection for YELLOW lines
-    lower_yellow = np.array([20,50,20])
-    upper_yellow = np.array([40,255,255])
     
+    
+    # color detection for YELLOW lines
+#     lower_yellow = np.array([0,0,245])
+#     upper_yellow = np.array([150,255,255])
+    lower_yellow = np.array([25,0,0])
+    upper_yellow = np.array([35,255,255])
     # yellow mask
     mask_yellow = cv2.inRange(pp,lower_yellow,upper_yellow)
     
     # right screen
 #     right_screen = mask_yellow[int(0):height, int(width/2):width]
     
-    contours_left, hierarchy_left = cv2.findContours(mask_yellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_left, hierarchy_left = cv2.findContours(mask_yellow, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 #     contours_right, hierarchy_right = cv2.findContours(right_screen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
 
@@ -128,7 +132,9 @@ def contourImage(frame_passed):
 
 #     driveCommands(left_contour_area, right_contour_area)
 #     driveLeftLineCommands(left_contour_area, right_contour_area)
-    return mask_yellow
+    kernel = np.ones((5,5), np.uint8)
+    out_image = cv2.morphologyEx( mask_yellow, cv2.MORPH_OPEN,kernel)
+    return out_image
 
 ###########################################################################################
 
@@ -198,7 +204,7 @@ def driveCommands(leftPix, rightPix):
         dummyPercent =0
         
     # When too far left and we wish to turn right
-    if leftPix >= rightPix + 1000:
+    if leftPix >= rightPix + 100:
         percent = int(100*leftPix/totalPix)
         
         if percent >=100:
@@ -226,7 +232,7 @@ def driveCommands(leftPix, rightPix):
         
         
     # Wehn too far right and we wish to turn left
-    elif rightPix >= leftPix + 1000:
+    elif rightPix >= leftPix + 100:
         
         percent = int(100*rightPix/totalPix)
         
@@ -272,78 +278,161 @@ def driveCommands(leftPix, rightPix):
         print(commandTemp)
     
 ############################################################################################
-def driveLeftLineCommands(leftPix, rightPix):
-    print(leftPix, rightPix)
-    # total number of pixels
-    totalPix = leftPix + rightPix
-    
-    # threshold bound
-    bound = 1000
-    
-    # arbitrary left number of pixels to not be over
-    leftThreshold = 10000
-    
-    # arbitrary right number of pixels to not be over
-    rightThreshold = 10000
+def driveCommands_2(LV, RV, BL, BR):
     
     
-    # When too far left and we wish to turn right
-    if leftPix >= leftThreshold + bound and rightPix <= rightThreshold:
+    # total number of pixels on V
+    total_V = LV+RV
+    
+    total_B = BL + BR
+    
+    
+    if total_B >0:
+        dummyPercent = int(100*BL/total_B)
+    else:
+        dummyPercent =0
+    
+    
+    
+    if total_B > 10000:
         
         print("CASE #1")
-#         commandTemp = "FR_0" + str(50)
-        # percent of leftPixels
-        percent = int(100*leftThreshold/leftPix)
+        BL_percent = dummyPercent
+        BR_percent = 100 - dummyPercent
         
-        if percent >=100:
-            commandTemp = "FR_" + str(percent)
+        if BL_percent > BR_percent + 5:
+            #turn 90 to right
+            # BACK UP
+            commandTemp = "BB_075"
+            command = ConvertStringsToBytes(commandTemp)
+            turnTimes = np.random.randint(5) + 5
+            print(turnTimes)
+            for i in range(1, 3):
+                sendMessage(command)
+                sleep(0.1)
+                print("GO BACK")
+                
+            commandTemp = "FR_075"
+            command = ConvertStringsToBytes(commandTemp)
+            turnTimes = np.random.randint(5) + 5
+            print(turnTimes)
+            for i in range(1, 5):
+                sendMessage(command)
+                sleep(0.1)
+
+           
+           
+           
+        elif BR_percent > BL_percent + 5:
+            
+            # BACK UP
+            commandTemp = "BB_075"
+            command = ConvertStringsToBytes(commandTemp)
+            turnTimes = np.random.randint(5) + 5
+            print(turnTimes)
+            for i in range(1, 3):
+                sendMessage(command)
+                sleep(0.1)
+                print("TORN! GO RIGHT 90")
+            #turn 90 to left
+            commandTemp = "FR_075"
+            command = ConvertStringsToBytes(commandTemp)
+            turnTimes = np.random.randint(5) + 5
+            print(turnTimes)
+            for i in range(1, 5):
+                sendMessage(command)
+                sleep(0.1)
+                print("TORN! GO LEFT 90") 
+            
+            
+            
         else:
-            commandTemp = "FR_0" + str(percent)
-        print(commandTemp)
-        
-        
-    # Wehn too far right and we wish to turn left
-    elif leftPix <= leftThreshold - bound and rightPix <= rightThreshold:
-#         commandTemp = "FF_100"
-#         print(commandTemp)
-        print("CASE #2")
-#         commandTemp = "FL_0" + str(50)
-        percent = int(100*leftPix/leftThreshold)
-        
-        if percent >=100:
-            commandTemp = "FL_" + str(percent)
-        elif percent == 0:
-            commandTemp = "FL_" +str(50)
-        else:
-            commandTemp = "FL_0" + str(percent)
-        
-        print(commandTemp)
-        
-    # Run into a concave corner so we need to turn right
-    elif leftPix >= leftThreshold + bound and rightPix >= rightThreshold:
-        
-        print("CASE #3")
-#         commandTemp = "FR_0" + str(50)
-        percent = int(100*rightThreshold/rightPix)
-        
-        if percent >=100:
-            commandTemp = "FR_" + str(percent)
-        else:
-            commandTemp = "FR_0" + str(percent)
-#         
-        print(commandTemp)
-        
-        
-    # Go forward otherwise
+            commandTemp = "BB_075"
+            command = ConvertStringsToBytes(commandTemp)
+            turnTimes = np.random.randint(5) + 5
+            print(turnTimes)
+            for i in range(1, 3):
+                sendMessage(command)
+                sleep(0.1)
+                print("TORN! GO RIGHT 90")
+            # turn 180 to left
+            commandTemp = "FR_075"
+            command = ConvertStringsToBytes(commandTemp)
+            turnTimes = np.random.randint(5) + 10
+            print(turnTimes)
+            for i in range(1, 9):
+                sendMessage(command)
+                sleep(0.1)
+                print("TURN LEFT 180")
+                
+                
+                
     else:
-        commandTemp = "FF_100"
-        print(commandTemp)
         
-    command = ConvertStringsToBytes(commandTemp)
-    
-    # Send command
-    sendMessage(command)
-    
+        print("CASE #2")
+        # When too far left and we wish to turn right
+        if LV >= RV + 3000:
+            percent = int(100*LV/total_V)
+            
+            if percent >=100:
+                commandTemp = "FR_" + str(percent)
+                command = ConvertStringsToBytes(commandTemp)
+                sendMessage(command)
+                print(commandTemp)
+                
+                    
+            else:
+                commandTemp = "FR_0" + str(percent)
+    #             commandTemp = "FR_100"
+                command = ConvertStringsToBytes(commandTemp)
+                sendMessage(command)
+                print(commandTemp)
+
+        # Wehn too far right and we wish to turn left
+        elif RV >= LV + 3000:
+            
+            percent = int(100*RV/total_V)
+            
+            if percent >=100:
+                commandTemp = "FL_" + str(percent)
+                command = ConvertStringsToBytes(commandTemp)
+                sendMessage(command)
+                print(commandTemp)
+            
+            else:
+                commandTemp = "FL_0" + str(percent)
+    #             commandTemp = "FL_100"
+                command = ConvertStringsToBytes(commandTemp)
+                sendMessage(command)
+                print(commandTemp)
+                
+
+#             
+#         elif LV >5000 and RV>5000:
+#             if RV > LV:
+#                 commandTemp = "FL_050"
+#                 command = ConvertStringsToBytes(commandTemp)
+#                 
+#             else:
+#                 commandTemp = "FR_050"
+#                 command = ConvertStringsToBytes(commandTemp)
+#             
+#             for i in range(1,5):
+#                 sendMessage(command)
+#                 sleep(0.1)
+#                 
+#             print(commandTemp) 
+            
+        # Go forward
+        else:
+            commandTemp = "FF_100"
+            command = ConvertStringsToBytes(commandTemp)       
+            # Send command
+            sendMessage(command)
+            print("JUST CRUZIN'")
+            print(commandTemp)
+            
+            
 ############################################################################################
 
 def canny(frame_passed):
@@ -544,10 +633,22 @@ def ConvertStringsToBytes(src):
 ###############################################################################################
 ################################################################################################
 
+# Camera properties
+# cam_props = {'brightness': 10, 'contrast':0, 'saturation': 5,
+#             'sharpness': 70, 'exposure_auto': 1, 'exposure_absolute':25,
+#              'focus_auto': 0, 'focus_absolute': 30,
+#              'white_balance_temperature_auto':0,'white_balance_temperature':3300}
+# 
+# for key in cam_props:
+#     
+#     subprocess.call(['v4l2-ctl -d /dev/video0 -c {}={}'.format(key, str(cam_props[key]))], shell=True)
 
 
 # Video Capture Object
 cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_EXPOSURE,0)
+
+sleep(1)
 
 while (True):
     #capture frame-by-frame
@@ -557,12 +658,8 @@ while (True):
     # make a coppy
     frame_copy = np.copy(frame)
     
-#     frame_copy = SF.adjust_brightness(frame_copy_temp, 75)
-    
-#     # Contour
-#     left_screen, right_screen = SF.contourImage(frame_copy)
-#     cv2.imshow('left', left_screen)
-#     cv2.imshow('right', right_screen)
+#     frame_copy = SF.adjust_brightness(frame_copy_temp, 10)
+
     
     # get contours of yellow line
     contours_yellow = contourImage(frame_copy)
@@ -573,19 +670,10 @@ while (True):
     # Lines
     height = frame_copy.shape[0]
     width = frame_copy.shape[1]
-#     print(height,width)
-#     # make a canny image
-#     canny_image = canny(frame_copy)
-#     
-#     cv2.imshow("CANNY", canny_image)
-#     # regions of interest
-#     # must be an array of polygons
-
-    # V Contours for left and right sides
     
     # Left Contour
     roi_left_V  = np.array([
-    [(0, int(4*height/5)), (int(width/2), int(4*height/5)), (int(width/4), 0), (0,0)]
+    [(int(0), int(7*height/10)), (int(width/2), int(7*height/10)), (int(2*width/5), int(height/10)), (int(width/10),int(height/10))]
     ])
     
     left_V_mask = region_of_interest(contours_yellow, roi_left_V)
@@ -594,18 +682,17 @@ while (True):
     
     # Right Contour
     roi_right_V  = np.array([
-    [(int(width/2), int(4*height/5)), (width, int(4*height/5)), (width,0),(int(3*width/4), 0)]
+    [(int(width/2), int(7*height/10)), (int(width), int(7*height/10)), (int(9*width/10),int(height/10)),(int(3*width/5), int(height/10))]
     ])
     right_V_mask = region_of_interest(contours_yellow, roi_right_V)
     
     number_on_right_V = contourImageROICounter(right_V_mask)
     
     
-    
     # Contours for bottom left and right boxes
     
     roi_BL  = np.array([
-    [(0, int(4*height/5)), (int(width/2), int(4*height/5)), (int(width/2), height), (0,height)]
+    [(0, int(7*height/10)), (int(width/2), int(7*height/10)), (int(width/2), height), (0,height)]
     ])
     
     BL_mask = region_of_interest(contours_yellow, roi_BL)
@@ -614,7 +701,7 @@ while (True):
     
     # Right Contour
     roi_BR  = np.array([
-    [(int(width/2), int(4*height/5)), (int(width), int(4*height/5)), (int(width), height), (int(width/2),height)]
+    [(int(width/2), int(7*height/10)), (int(width), int(7*height/10)), (int(width), height), (int(width/2),height)]
     ])
     
     BR_mask = region_of_interest(contours_yellow, roi_BR)
@@ -627,38 +714,14 @@ while (True):
     
     tots = right_V_mask + left_V_mask + BL_mask + BR_mask
     
+    
+    # SEND COMMANDS
+    driveCommands_2(number_on_left_V , number_on_right_V , number_on_BL, number_on_BR)
+    
+    cv2.imshow("rgb", frame_copy)
     cv2.imshow("mask", tots)
-    # left and right cropped images
-#     cropped_left = SF.region_of_interest(canny_image,roi_left)
-    # lines on left and right
-#     left_lines = cv2.HoughLinesP(cropped_left, 100,np.pi/180, 10, np.array([]), minLineLength = 10, maxLineGap = 1)
-#                     right_lines = cv2.HoughLinesP(cropped_right, 100,np.pi/180, 10, np.array([]), minLineLength = 10, maxLineGap = 5)
-#     print(left_lines)
-    # Display Lines
-#     if left_lines is not None:
-#         print("here too")
-#         all_lines_image = SF.display_lines(frame_copy, left_lines)
-#         left_combo_image_l = cv2.addWeighted(frame_copy, 0.9, all_lines_image,1,1)
-#         cv2.imshow("ALL LINES", left_combo_image_l)
-# 
-#     else:
-#         cv2.imshow("ALL LINES", frame_copy)
+    sleep(0.075)
 
-#     # averaged lines
-#     ave_left_line_image = SF.average_slope_intercept(frame_copy, left_lines)
-# #     print(ave_left_line_image)
-#                         
-#     # Line images
-#     left_line_image = SF.display_lines(frame_copy, ave_left_line_image)
-#     print(left_line_image)
-#                                    
-#     # Display Lines
-#     if left_line_image is not None:
-# #         print("here too")
-#         left_combo_image = cv2.addWeighted(frame_copy, 0.9, left_line_image,1,1)
-#         cv2.imshow("LEFT", left_combo_image)
-#     else:
-#         cv2.imshow("LEFT", frame_copy)
 
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
