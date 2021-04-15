@@ -339,7 +339,7 @@ def driveCommands_2(LV, RV, BL, BR):
             #turn 90 to left
             commandTemp = "FR_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 3
+            turnTimes = np.random.randint(5) + 5
             print(turnTimes)
             for i in range(1, turnTimes):
                 sendMessage(command)
@@ -351,7 +351,7 @@ def driveCommands_2(LV, RV, BL, BR):
         else:
             commandTemp = "BB_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 3
+            turnTimes = np.random.randint(5) + 5
             print(turnTimes)
             for i in range(1, 3):
                 sendMessage(command)
@@ -373,7 +373,7 @@ def driveCommands_2(LV, RV, BL, BR):
     else:
 
         # When too far left and we wish to turn right
-        if LV >= RV + 8000:
+        if LV >= RV + 7000:
             percent = int(100*LV/total_V)
             
             if percent >=100:
@@ -400,7 +400,7 @@ def driveCommands_2(LV, RV, BL, BR):
 #                 sleep(delayTime)
 
         # Wehn too far right and we wish to turn left
-        elif RV >= LV + 8000:
+        elif RV >= LV + 7000:
             
             percent = int(100*RV/total_V)
             
@@ -733,8 +733,8 @@ while (True):
     driveCommands_2(number_on_left_V , number_on_right_V , number_on_BL, number_on_BR)
     
 #     cv2.imshow("rgb", frame_copy)
-#     cv2.imshow("mask", tots)
-#     sleep(0.07)
+    cv2.imshow("mask", tots)
+    sleep(0.07)
 
 
     
