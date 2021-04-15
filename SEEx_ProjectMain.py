@@ -35,7 +35,7 @@ for i in LEDs:
 
 # take time for SEEx robot (defined as global above)
 SEEx_time_0 = time()
-
+delayTime = 0.2
 ###############################################################################################
 ###############################################################################################
 #
@@ -71,10 +71,10 @@ def contourImage(frame_passed):
     
     
     # color detection for YELLOW lines
-#     lower_yellow = np.array([0,0,245])
-#     upper_yellow = np.array([150,255,255])
-    lower_yellow = np.array([25,0,0])
-    upper_yellow = np.array([35,255,255])
+    lower_yellow = np.array([0,0,180])
+    upper_yellow = np.array([150,255,255])
+#     lower_yellow = np.array([25,0,0])
+#     upper_yellow = np.array([35,255,255])
     # yellow mask
     mask_yellow = cv2.inRange(pp,lower_yellow,upper_yellow)
     
@@ -294,31 +294,32 @@ def driveCommands_2(LV, RV, BL, BR):
     
     
     
-    if total_B > 10000:
+    if total_B > 15000:
         
         print("CASE #1")
         BL_percent = dummyPercent
         BR_percent = 100 - dummyPercent
         
         if BL_percent > BR_percent + 5:
-            #turn 90 to right
+            
             # BACK UP
             commandTemp = "BB_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
-            print(turnTimes)
+        
             for i in range(1, 3):
                 sendMessage(command)
-                sleep(0.1)
-                print("GO BACK")
+                sleep(delayTime)
+                print("TORN!GO BACK and RIGHT")
                 
+            #turn 90 to right    
             commandTemp = "FR_075"
             command = ConvertStringsToBytes(commandTemp)
             turnTimes = np.random.randint(5) + 5
+            
             print(turnTimes)
-            for i in range(1, 5):
+            for i in range(1, turnTimes):
                 sendMessage(command)
-                sleep(0.1)
+                sleep(delayTime)
 
            
            
@@ -328,50 +329,51 @@ def driveCommands_2(LV, RV, BL, BR):
             # BACK UP
             commandTemp = "BB_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
-            print(turnTimes)
+
             for i in range(1, 3):
                 sendMessage(command)
-                sleep(0.1)
-                print("TORN! GO RIGHT 90")
+                sleep(delayTime)
+                print("TORN! GO BACK and LEFT")
+                
+                
             #turn 90 to left
             commandTemp = "FR_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
+            turnTimes = np.random.randint(5) + 3
             print(turnTimes)
-            for i in range(1, 5):
+            for i in range(1, turnTimes):
                 sendMessage(command)
-                sleep(0.1)
-                print("TORN! GO LEFT 90") 
+                sleep(delayTime)
+              
             
             
             
         else:
             commandTemp = "BB_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
+            turnTimes = np.random.randint(5) + 3
             print(turnTimes)
             for i in range(1, 3):
                 sendMessage(command)
-                sleep(0.1)
+                sleep(delayTime)
                 print("TORN! GO RIGHT 90")
+                
             # turn 180 to left
             commandTemp = "FR_075"
             command = ConvertStringsToBytes(commandTemp)
             turnTimes = np.random.randint(5) + 10
             print(turnTimes)
-            for i in range(1, 9):
+            for i in range(1, 10):
                 sendMessage(command)
-                sleep(0.1)
+                sleep(delayTime)
                 print("TURN LEFT 180")
                 
                 
                 
     else:
-        
-        print("CASE #2")
+
         # When too far left and we wish to turn right
-        if LV >= RV + 3000:
+        if LV >= RV + 8000:
             percent = int(100*LV/total_V)
             
             if percent >=100:
@@ -387,9 +389,18 @@ def driveCommands_2(LV, RV, BL, BR):
                 command = ConvertStringsToBytes(commandTemp)
                 sendMessage(command)
                 print(commandTemp)
+                
+#             commandTemp = "FR_075"
+#             command = ConvertStringsToBytes(commandTemp)
+#             turnTimes = np.random.randint(5) + 2
+#             
+#             print(turnTimes)
+#             for i in range(1, 3):
+#                 sendMessage(command)
+#                 sleep(delayTime)
 
         # Wehn too far right and we wish to turn left
-        elif RV >= LV + 3000:
+        elif RV >= LV + 8000:
             
             percent = int(100*RV/total_V)
             
@@ -406,22 +417,15 @@ def driveCommands_2(LV, RV, BL, BR):
                 sendMessage(command)
                 print(commandTemp)
                 
-
+#             commandTemp = "FL_075"
+#             command = ConvertStringsToBytes(commandTemp)
+#             turnTimes = np.random.randint(5) + 2
 #             
-#         elif LV >5000 and RV>5000:
-#             if RV > LV:
-#                 commandTemp = "FL_050"
-#                 command = ConvertStringsToBytes(commandTemp)
-#                 
-#             else:
-#                 commandTemp = "FR_050"
-#                 command = ConvertStringsToBytes(commandTemp)
-#             
-#             for i in range(1,5):
+#             print(turnTimes)
+#             for i in range(1, 3):
 #                 sendMessage(command)
-#                 sleep(0.1)
-#                 
-#             print(commandTemp) 
+#                 sleep(delayTime)
+
             
         # Go forward
         else:
@@ -601,6 +605,8 @@ def make_coordinates(image, coords):
 ############################################################################################
         
 def sendMessage(command):
+    
+    
     global SEEx_time_0
     
     # get current time
@@ -609,13 +615,21 @@ def sendMessage(command):
     # calculate time difference
     time_diff = current_time - SEEx_time_0
     
-    if time_diff >= 0.1:  # if time difference greater than or equal to 0.1s, send commands
-        try:
-            I2Cbus.write_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,command)
-            SEEx_time_0 = time()
-        except:
-            print("Remote I/O ERROR")
-            
+    # Force message
+    FM = 1
+    
+    
+    if time_diff >= delayTime:  # if time difference greater than or equal to 0.1s, send commands
+        
+       while FM == 1: 
+            try:
+                I2Cbus.write_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,command)
+                SEEx_time_0 = time()
+                FM=0
+            except:
+                FM=1
+                print("Remote I/O ERROR")
+                
         
 #     data = I2Cbus.read_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,10)
 #         I2Cbus.read_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,10)
@@ -718,9 +732,9 @@ while (True):
     # SEND COMMANDS
     driveCommands_2(number_on_left_V , number_on_right_V , number_on_BL, number_on_BR)
     
-    cv2.imshow("rgb", frame_copy)
-    cv2.imshow("mask", tots)
-    sleep(0.075)
+#     cv2.imshow("rgb", frame_copy)
+#     cv2.imshow("mask", tots)
+#     sleep(0.07)
 
 
     
