@@ -35,7 +35,7 @@ for i in LEDs:
 
 # take time for SEEx robot (defined as global above)
 SEEx_time_0 = time()
-delayTime = 0.2
+delayTime = 0.175
 ###############################################################################################
 ###############################################################################################
 #
@@ -71,10 +71,10 @@ def contourImage(frame_passed):
     
     
     # color detection for YELLOW lines
-    lower_yellow = np.array([0,0,180])
-    upper_yellow = np.array([150,255,255])
-#     lower_yellow = np.array([25,0,0])
-#     upper_yellow = np.array([35,255,255])
+#     lower_yellow = np.array([0,0,245])
+#     upper_yellow = np.array([150,255,255])
+    lower_yellow = np.array([25,10,0])
+    upper_yellow = np.array([35,255,255])
     # yellow mask
     mask_yellow = cv2.inRange(pp,lower_yellow,upper_yellow)
     
@@ -84,54 +84,6 @@ def contourImage(frame_passed):
     contours_left, hierarchy_left = cv2.findContours(mask_yellow, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 #     contours_right, hierarchy_right = cv2.findContours(right_screen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-
-    
-    # initialize left contour area to 0
-#     left_contour_area = 0
-#     
-#     if len(contours_left) !=0:
-#         for contour in contours_left:
-#             if cv2.contourArea(contour)>300:
-#                 left_contour_area = left_contour_area + cv2.contourArea(contour)
-#                 
-                
-#                 (x,y,w,h) = cv2.boundingRect(contour)
-# #               
-#                 
-#                 rect = cv2.minAreaRect(contour)
-#                 box = cv2.boxPoints(rect)
-#                 box = np. int0(box)
-#                 
-#                 return box
-#                 cv2.drawContours(frame, [box], 0, (0,191,255),2)
-     
-    # initialize right contour area to 0     
-#     right_contour_area = 0
-#     
-#     if len(contours_right) !=0:
-#         for contour in contours_right:
-#             if cv2.contourArea(contour)>300:
-#                 right_contour_area = right_contour_area + cv2.contourArea(contour)
-    
-#     print(left_contour_area, right_contour_area)
-#     # color detection for PURPLE lines
-#     lower_purple = np.array([130,0,20])
-#     upper_purple = np.array([160,255,255])
-#     
-#     
-#     mask_purple = cv2.inRange(pp,lower_purple,upper_purple)
-#     contours_purple, hierarchy = cv2.findContours(mask_purple, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-#     
-#     if len(contours_purple) !=0:
-#         for contour in contours_purple:
-#             if cv2.contourArea(contour)>500:
-#                 x,y,w,h = cv2.boundingRect(contour)
-#                 cv2.rectangle(frame, (x,y), (x+w,y+h), (150,0,150), 3)
-                    
-
-
-#     driveCommands(left_contour_area, right_contour_area)
-#     driveLeftLineCommands(left_contour_area, right_contour_area)
     kernel = np.ones((5,5), np.uint8)
     out_image = cv2.morphologyEx( mask_yellow, cv2.MORPH_OPEN,kernel)
     return out_image
@@ -146,29 +98,7 @@ def contourImageROICounter(frame_passed):
     height = frame.shape[0]
     width = frame.shape[1]
     contour_area = np.sum(frame==255)
-    
-# #     # convert to HSV
-# #     pp = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-# 
-#     # color detection for YELLOW lines
-#     lower_white = np.array([0,0,180])
-#     upper_white = np.array([255,255,255])
-#     
-#     # yellow mask
-#     mask = cv2.inRange(frame,lower_white,upper_white)
-# 
-#     
-#     contours, hierarchy_left = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-#     
-#     # initialize left contour area to 0
-#     contour_area = 0
-#     
-#     if len(contours) !=0:
-#         for contour in contours:
-#             if cv2.contourArea(contour)>10000:
-#                 contour_area = contour_area + cv2.contourArea(contour)
-                
-    
+
     return contour_area
 ############################################################################################
  
@@ -191,91 +121,6 @@ def order_box(box):
     
     return np.array([top_l, top_r, btm_r, btm_l])
 
- 
- 
-############################################################################################
-def driveCommands(leftPix, rightPix):
-    print(leftPix, rightPix)
-    # total number of pixels
-    totalPix = leftPix + rightPix
-    if totalPix >0:
-        dummyPercent = int(100*leftPix/totalPix)
-    else:
-        dummyPercent =0
-        
-    # When too far left and we wish to turn right
-    if leftPix >= rightPix + 100:
-        percent = int(100*leftPix/totalPix)
-        
-        if percent >=100:
-            commandTemp = "FR_" + str(percent)
-            command = ConvertStringsToBytes(commandTemp)
-            sendMessage(command)
-            print(commandTemp)
-            
-        elif percent <= 52.5 and percent >= 47.5:
-            commandTemp = "FR_100"
-            command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 10
-            print(turnTimes)
-            for i in range(1,3):
-                sendMessage(command)
-                sleep(0.1)
-                print("TORN! GO RIGHT")
-                
-        else:
-            commandTemp = "FR_0" + str(percent)
-#             commandTemp = "FR_100"
-            command = ConvertStringsToBytes(commandTemp)
-            sendMessage(command)
-            print(commandTemp)
-        
-        
-    # Wehn too far right and we wish to turn left
-    elif rightPix >= leftPix + 100:
-        
-        percent = int(100*rightPix/totalPix)
-        
-        if percent >=100:
-            commandTemp = "FL_" + str(percent)
-            command = ConvertStringsToBytes(commandTemp)
-            sendMessage(command)
-            print(commandTemp)
-            
-        elif percent <= 52.5 and percent >= 47.5:
-            
-            commandTemp = "FL_100"
-            command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
-            print(turnTimes)
-            for i in range(1, 3):
-                sendMessage(command)
-                sleep(0.1)
-                print("TORN! GO LEFT")  
-        
-        else:
-            commandTemp = "FL_0" + str(percent)
-#             commandTemp = "FL_100"
-            command = ConvertStringsToBytes(commandTemp)
-            sendMessage(command)
-            print(commandTemp)
-                
-    elif dummyPercent <=51 and dummyPercent > 49:
-        commandTemp = "FL_100"
-        command = ConvertStringsToBytes(commandTemp)
-        for i in range(1, 12):
-            sendMessage(command)
-            sleep(0.1)
-            print("DUMMY 180")
-        
-    # Go forward
-    else:
-        commandTemp = "FF_100"
-        command = ConvertStringsToBytes(commandTemp)       
-        # Send command
-        sendMessage(command)
-        print("JUST CRUZIN'")
-        print(commandTemp)
     
 ############################################################################################
 def driveCommands_2(LV, RV, BL, BR):
@@ -300,134 +145,115 @@ def driveCommands_2(LV, RV, BL, BR):
         BL_percent = dummyPercent
         BR_percent = 100 - dummyPercent
         
-        if BL_percent > BR_percent + 5:
+        if BL_percent > BR_percent + 10:
+         
+            # BACK UP
+            commandTemp = "BB_075"
+            command = ConvertStringsToBytes(commandTemp)
+
+            for i in range(2):
+                sendMessage(command)
+                sleep(delayTime)
+                print("GO BACK")
+            
+            # Turn to right
+            commandTemp = "FR_075"
+            command = ConvertStringsToBytes(commandTemp)
+            for i in range(3):
+                sendMessage(command)
+                sleep(delayTime)
+
+           
+           
+           
+        elif BR_percent > BL_percent + 10:
             
             # BACK UP
             commandTemp = "BB_075"
             command = ConvertStringsToBytes(commandTemp)
         
-            for i in range(1, 3):
+            for i in range(2):
                 sendMessage(command)
                 sleep(delayTime)
-                print("TORN!GO BACK and RIGHT")
+                print("TORN! GO RIGHT 90")
                 
-            #turn 90 to right    
+                
+            #turn to left
             commandTemp = "FR_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
-            
-            print(turnTimes)
-            for i in range(1, turnTimes):
+            for i in range(3):
                 sendMessage(command)
                 sleep(delayTime)
-
-           
-           
-           
-        elif BR_percent > BL_percent + 5:
-            
-            # BACK UP
-            commandTemp = "BB_075"
-            command = ConvertStringsToBytes(commandTemp)
-
-            for i in range(1, 3):
-                sendMessage(command)
-                sleep(delayTime)
-                print("TORN! GO BACK and LEFT")
-                
-                
-            #turn 90 to left
-            commandTemp = "FR_075"
-            command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
-            print(turnTimes)
-            for i in range(1, turnTimes):
-                sendMessage(command)
-                sleep(delayTime)
-              
+                print("TORN! GO LEFT 90") 
             
             
             
         else:
             commandTemp = "BB_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 5
-            print(turnTimes)
-            for i in range(1, 3):
+
+            for i in range(2):
                 sendMessage(command)
                 sleep(delayTime)
                 print("TORN! GO RIGHT 90")
-                
             # turn 180 to left
             commandTemp = "FR_075"
             command = ConvertStringsToBytes(commandTemp)
-            turnTimes = np.random.randint(5) + 10
-            print(turnTimes)
-            for i in range(1, 10):
+            for i in range(7):
                 sendMessage(command)
                 sleep(delayTime)
                 print("TURN LEFT 180")
-                
-                
-                
+            
     else:
-
+        
+        print("CASE #2")
         # When too far left and we wish to turn right
-        if LV >= RV + 7000:
+        if LV >= RV + 8000:
             percent = int(100*LV/total_V)
             
             if percent >=100:
                 commandTemp = "FR_" + str(percent)
                 command = ConvertStringsToBytes(commandTemp)
-                sendMessage(command)
-                print(commandTemp)
+                 #turn to left
+                for i in range(3):
+                    sendMessage(command)
+                    sleep(delayTime)
+                    print(commandTemp)
                 
                     
             else:
                 commandTemp = "FR_0" + str(percent)
     #             commandTemp = "FR_100"
                 command = ConvertStringsToBytes(commandTemp)
-                sendMessage(command)
-                print(commandTemp)
-                
-#             commandTemp = "FR_075"
-#             command = ConvertStringsToBytes(commandTemp)
-#             turnTimes = np.random.randint(5) + 2
-#             
-#             print(turnTimes)
-#             for i in range(1, 3):
-#                 sendMessage(command)
-#                 sleep(delayTime)
+                for i in range(3):
+                    sendMessage(command)
+                    sleep(delayTime)
+                    print(commandTemp)
+            
 
         # Wehn too far right and we wish to turn left
-        elif RV >= LV + 7000:
+        elif RV >= LV + 8000:
             
             percent = int(100*RV/total_V)
             
             if percent >=100:
                 commandTemp = "FL_" + str(percent)
                 command = ConvertStringsToBytes(commandTemp)
-                sendMessage(command)
-                print(commandTemp)
+                for i in range(3):
+                    sendMessage(command)
+                    sleep(delayTime)
+                    print(commandTemp)
             
             else:
                 commandTemp = "FL_0" + str(percent)
     #             commandTemp = "FL_100"
                 command = ConvertStringsToBytes(commandTemp)
                 sendMessage(command)
-                print(commandTemp)
+                for i in range(3):
+                    sendMessage(command)
+                    sleep(delayTime)
+                    print(commandTemp)
                 
-#             commandTemp = "FL_075"
-#             command = ConvertStringsToBytes(commandTemp)
-#             turnTimes = np.random.randint(5) + 2
-#             
-#             print(turnTimes)
-#             for i in range(1, 3):
-#                 sendMessage(command)
-#                 sleep(delayTime)
-
-            
-        # Go forward
         else:
             commandTemp = "FF_100"
             command = ConvertStringsToBytes(commandTemp)       
@@ -606,30 +432,12 @@ def make_coordinates(image, coords):
         
 def sendMessage(command):
     
-    
-    global SEEx_time_0
-    
-    # get current time
-    current_time = time()
-
-    # calculate time difference
-    time_diff = current_time - SEEx_time_0
-    
-    # Force message
-    FM = 1
-    
-    
-    if time_diff >= delayTime:  # if time difference greater than or equal to 0.1s, send commands
+    try:
+        I2Cbus.write_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,command)
         
-       while FM == 1: 
-            try:
-                I2Cbus.write_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,command)
-                SEEx_time_0 = time()
-                FM=0
-            except:
-                FM=1
-                print("Remote I/O ERROR")
-                
+    except:
+        print("Remote I/O ERROR")
+            
         
 #     data = I2Cbus.read_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,10)
 #         I2Cbus.read_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,10)
@@ -665,77 +473,85 @@ cap.set(cv2.CAP_PROP_EXPOSURE,0)
 sleep(1)
 
 while (True):
+    
     #capture frame-by-frame
     ret, frame = cap.read()
-    
-    
-    # make a coppy
-    frame_copy = np.copy(frame)
-    
-#     frame_copy = SF.adjust_brightness(frame_copy_temp, 10)
+    # get current time
+    current_time = time()
 
-    
-    # get contours of yellow line
-    contours_yellow = contourImage(frame_copy)
-#     if left_box is not None:
-#         cv2.drawContours(frame_copy, [left_box], 0, (0,191,255),2)
-  
-    
-    # Lines
-    height = frame_copy.shape[0]
-    width = frame_copy.shape[1]
-    
-    # Left Contour
-    roi_left_V  = np.array([
-    [(int(0), int(7*height/10)), (int(width/2), int(7*height/10)), (int(2*width/5), int(height/10)), (int(width/10),int(height/10))]
-    ])
-    
-    left_V_mask = region_of_interest(contours_yellow, roi_left_V)
-    
-    number_on_left_V = contourImageROICounter(left_V_mask)
-    
-    # Right Contour
-    roi_right_V  = np.array([
-    [(int(width/2), int(7*height/10)), (int(width), int(7*height/10)), (int(9*width/10),int(height/10)),(int(3*width/5), int(height/10))]
-    ])
-    right_V_mask = region_of_interest(contours_yellow, roi_right_V)
-    
-    number_on_right_V = contourImageROICounter(right_V_mask)
+    # calculate time difference
+    time_diff = current_time - SEEx_time_0
     
     
-    # Contours for bottom left and right boxes
-    
-    roi_BL  = np.array([
-    [(0, int(7*height/10)), (int(width/2), int(7*height/10)), (int(width/2), height), (0,height)]
-    ])
-    
-    BL_mask = region_of_interest(contours_yellow, roi_BL)
-    
-    number_on_BL = contourImageROICounter(BL_mask)
-    
-    # Right Contour
-    roi_BR  = np.array([
-    [(int(width/2), int(7*height/10)), (int(width), int(7*height/10)), (int(width), height), (int(width/2),height)]
-    ])
-    
-    BR_mask = region_of_interest(contours_yellow, roi_BR)
-    
-    number_on_BR = contourImageROICounter(BR_mask)
-    
-    
-    # Pixels on V_L, V_R, B_L, and B_R
-    print(number_on_left_V, number_on_right_V, number_on_BL, number_on_BR)
-    
-    tots = right_V_mask + left_V_mask + BL_mask + BR_mask
-    
-    
-    # SEND COMMANDS
-    driveCommands_2(number_on_left_V , number_on_right_V , number_on_BL, number_on_BR)
-    
-#     cv2.imshow("rgb", frame_copy)
-    cv2.imshow("mask", tots)
-    sleep(0.07)
+    if time_diff >= delayTime:
+        
+        # make a coppy
+        frame_copy = np.copy(frame)
+        
+    #     frame_copy = SF.adjust_brightness(frame_copy_temp, 10)
 
+        
+        # get contours of yellow line
+        contours_yellow = contourImage(frame_copy)
+    #     if left_box is not None:
+    #         cv2.drawContours(frame_copy, [left_box], 0, (0,191,255),2)
+      
+        
+        # Lines
+        height = frame_copy.shape[0]
+        width = frame_copy.shape[1]
+        
+        # Left Contour
+        roi_left_V  = np.array([
+        [(int(0), int(7*height/10)), (int(width/2), int(7*height/10)), (int(2*width/5), int(height/10)), (int(width/10),int(height/10))]
+        ])
+        
+        left_V_mask = region_of_interest(contours_yellow, roi_left_V)
+        
+        number_on_left_V = contourImageROICounter(left_V_mask)
+        
+        # Right Contour
+        roi_right_V  = np.array([
+            [(int(width/2), int(7*height/10)), (int(width), int(7*height/10)), (int(9*width/10),int(height/10)),(int(3*width/5), int(height/10))]
+            ])
+        
+        right_V_mask = region_of_interest(contours_yellow, roi_right_V)
+        
+        number_on_right_V = contourImageROICounter(right_V_mask)
+            
+            
+        # Contours for bottom left and right boxes
+        
+        roi_BL  = np.array([
+        [(0, int(7*height/10)), (int(width/2), int(7*height/10)), (int(width/2), height), (0,height)]
+        ])
+        
+        BL_mask = region_of_interest(contours_yellow, roi_BL)
+        
+        number_on_BL = contourImageROICounter(BL_mask)
+        
+        # Right Contour
+        roi_BR  = np.array([
+        [(int(width/2), int(7*height/10)), (int(width), int(7*height/10)), (int(width), height), (int(width/2),height)]
+        ])
+        
+        BR_mask = region_of_interest(contours_yellow, roi_BR)
+        
+        number_on_BR = contourImageROICounter(BR_mask)
+        
+        
+        # Pixels on V_L, V_R, B_L, and B_R
+        print(number_on_left_V, number_on_right_V, number_on_BL, number_on_BR)
+        
+        tots = right_V_mask + left_V_mask + BL_mask + BR_mask
+        
+        
+        # SEND COMMANDS
+        driveCommands_2(number_on_left_V , number_on_right_V , number_on_BL, number_on_BR)
+        
+        SEEx_time_0 = time()
+    else:
+        continue
 
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
