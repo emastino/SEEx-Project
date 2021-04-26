@@ -35,7 +35,12 @@ for i in LEDs:
 
 # take time for SEEx robot (defined as global above)
 SEEx_time_0 = time()
-delayTime = 0.175
+delayTime = 0.15
+
+# Stuck Logic
+currentCommand = "FF"
+previousCommand = "FF"
+stuckCounter = 0
 ###############################################################################################
 ###############################################################################################
 #
@@ -175,7 +180,7 @@ def driveCommands_2(LV, RV, BL, BR):
             for i in range(2):
                 sendMessage(command)
                 sleep(delayTime)
-                print("TORN! GO RIGHT 90")
+                print("TORN!")
                 
                 
             #turn to left
@@ -215,7 +220,7 @@ def driveCommands_2(LV, RV, BL, BR):
                 commandTemp = "FR_" + str(percent)
                 command = ConvertStringsToBytes(commandTemp)
                  #turn to left
-                for i in range(3):
+                for i in range(2):
                     sendMessage(command)
                     sleep(delayTime)
                     print(commandTemp)
@@ -225,12 +230,12 @@ def driveCommands_2(LV, RV, BL, BR):
                 commandTemp = "FR_0" + str(percent)
     #             commandTemp = "FR_100"
                 command = ConvertStringsToBytes(commandTemp)
-                for i in range(3):
+                for i in range(2):
                     sendMessage(command)
                     sleep(delayTime)
                     print(commandTemp)
             
-
+            currentCommand = "FR"
         # Wehn too far right and we wish to turn left
         elif RV >= LV + 8000:
             
@@ -239,7 +244,7 @@ def driveCommands_2(LV, RV, BL, BR):
             if percent >=100:
                 commandTemp = "FL_" + str(percent)
                 command = ConvertStringsToBytes(commandTemp)
-                for i in range(3):
+                for i in range(2):
                     sendMessage(command)
                     sleep(delayTime)
                     print(commandTemp)
@@ -249,11 +254,11 @@ def driveCommands_2(LV, RV, BL, BR):
     #             commandTemp = "FL_100"
                 command = ConvertStringsToBytes(commandTemp)
                 sendMessage(command)
-                for i in range(3):
+                for i in range(2):
                     sendMessage(command)
                     sleep(delayTime)
                     print(commandTemp)
-                
+            currentCommand = "FL" 
         else:
             commandTemp = "FF_100"
             command = ConvertStringsToBytes(commandTemp)       
@@ -261,7 +266,14 @@ def driveCommands_2(LV, RV, BL, BR):
             sendMessage(command)
             print("JUST CRUZIN'")
             print(commandTemp)
+            currentCommand = "FF"
             
+    # STUCK LOGIC
+    if currentCommand == previousCommand:
+        stuckCounter+=1
+        previousCommand = currentCommand
+    else:
+        stuckConter = 0
             
 ############################################################################################
 
@@ -552,7 +564,17 @@ while (True):
         SEEx_time_0 = time()
     else:
         continue
-
+    
+    # Do this if 75 of the same commands have been sent
+    if stuckCounter >= 75:
+        # BACK UP
+        commandTemp = "BB_075"
+        command = ConvertStringsToBytes(commandTemp)
+    
+        for i in range(5):
+            sendMessage(command)
+            sleep(delayTime)
+            print("YOU'RE STUCK")
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
