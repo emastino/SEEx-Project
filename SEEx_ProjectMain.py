@@ -35,11 +35,13 @@ for i in LEDs:
 
 # take time for SEEx robot (defined as global above)
 SEEx_time_0 = time()
-delayTime = 0.15
+delayTime = 0.075
 
 # Stuck Logic
+global currentCommand ,previousCommand, stuckCounter
 currentCommand = "FF"
 previousCommand = "FF"
+
 stuckCounter = 0
 ###############################################################################################
 ###############################################################################################
@@ -129,7 +131,7 @@ def order_box(box):
     
 ############################################################################################
 def driveCommands_2(LV, RV, BL, BR):
-    
+    global currentCommand, previousCommand, stuckCounter
     
     # total number of pixels on V
     total_V = LV+RV
@@ -208,8 +210,11 @@ def driveCommands_2(LV, RV, BL, BR):
                 sendMessage(command)
                 sleep(delayTime)
                 print("TURN LEFT 180")
+                
+            currentCommand = "  "
             
     else:
+        
         
         print("CASE #2")
         # When too far left and we wish to turn right
@@ -258,6 +263,7 @@ def driveCommands_2(LV, RV, BL, BR):
                     sendMessage(command)
                     sleep(delayTime)
                     print(commandTemp)
+                    
             currentCommand = "FL" 
         else:
             commandTemp = "FF_100"
@@ -266,15 +272,18 @@ def driveCommands_2(LV, RV, BL, BR):
             sendMessage(command)
             print("JUST CRUZIN'")
             print(commandTemp)
+            
             currentCommand = "FF"
+        
             
-    # STUCK LOGIC
-    if currentCommand == previousCommand:
-        stuckCounter+=1
-        previousCommand = currentCommand
-    else:
-        stuckConter = 0
-            
+        # STUCK LOGIC
+        if currentCommand == previousCommand:
+            stuckCounter+=1
+            print("STUCK COUNTER: ", stuckCounter)
+            previousCommand = currentCommand
+        else:
+            stuckCounter = 0
+                
 ############################################################################################
 
 def canny(frame_passed):
@@ -443,7 +452,6 @@ def make_coordinates(image, coords):
 ############################################################################################
         
 def sendMessage(command):
-    
     try:
         I2Cbus.write_i2c_block_data(I2C_SLAVE_ADDRESS,0x00,command)
         
@@ -566,16 +574,17 @@ while (True):
         continue
     
     # Do this if 75 of the same commands have been sent
-    if stuckCounter >= 75:
+    if stuckCounter >= 100:
         # BACK UP
         commandTemp = "BB_075"
         command = ConvertStringsToBytes(commandTemp)
-    
-        for i in range(5):
+        
+        for i in range(7):
             sendMessage(command)
             sleep(delayTime)
             print("YOU'RE STUCK")
-    
+            
+        stuckCounter = 0
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     
